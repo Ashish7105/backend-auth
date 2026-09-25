@@ -119,6 +119,26 @@ app.get('/profile', isloggedIn, async (req, res) => {
 })
 
 
+app.get('/like/:id', isloggedIn, async (req, res) => {
+
+    let post = await postModel.findOne({ _id: req.params.id }).populate("user");
+
+    if(post.likes.indexOf(req.user.userid) === -1){ // it check userid is there or not in  post ke likes array me wo id present nahi hota to -1 return karega  
+        post.likes.push(req.user.userid); // this will increase the like
+    }
+    else{
+        post.likes.splice(post.likes.indexOf(req.user.userid), 1)
+    }
+    
+    await post.save();
+
+    res.redirect("/profile");
+
+})
+
+
+
+
 app.post('/post', isloggedIn, async (req, res) => {
 
     let user = await userModel.findOne({ email: req.user.email });  // this line will find which user is loggedIn 
