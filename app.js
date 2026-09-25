@@ -1,12 +1,11 @@
 const express = require('express');
-const { model, models } = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
+const userModel = require("./models/user");
+const postModel = require("./models/post");
 
 const app = express();
 
-const userModel = require("./models/user");
-const postModel = require("./models/post");
 
 const cookieParser = require('cookie-parser');
 
@@ -27,7 +26,6 @@ app.post('/register', async (req, res) => {
     let { email, password, username, name, age, } = req.body;
 
     console.log("password entered:", password);
-
 
 
     let user = await userModel.findOne({ email });
@@ -85,8 +83,6 @@ app.post('/login', async (req, res) => {
         }
         else 
             res.redirect("/login");
-        
-
     })
 
 })
@@ -94,20 +90,21 @@ app.post('/login', async (req, res) => {
 
 app.get('/logout', (req, res) => {
     res.cookie("token", "");
-    res.redirect('login');
+    res.redirect("/login");
 })
 
 
 
 
 function isloggedIn(req, res, next) {
-    if (req.cookies.token === "") res.redirect("/login");
-
-    else {
+    if (!req.cookies.token){
+         return res.redirect("/login");
+    }
+    
         let data = jwt.verify(req.cookies.token, "shhh");
         req.user = data;
         next();
-    }
+
 }
 
 
@@ -115,13 +112,28 @@ function isloggedIn(req, res, next) {
 
 app.get('/profile', isloggedIn, async (req, res) => {
 
-    let user = await userModel.findOne({ email: req.user.email });
+    let user = await userModel.findOne({ email: req.user.email }).populate("posts");
     console.log(user);
     res.render("profile", { user });
 
-
 })
 
+
+app.post('/post', isloggedIn, async (req, res) => {
+
+    let user = await userModel.findOne({ email: req.user.email });  // this line will find which user is loggedIn 
+    let {content} = req.body;
+
+    let post = await postModel.create({
+        user: user._id,
+        content
+    })
+    
+    user.posts.push(post._id);
+    await user.save();
+    res.redirect("/profile");
+
+})
 
 
 app.listen(3001);
